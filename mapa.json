@@ -1,0 +1,16 @@
+{
+  "v": 1,
+  "nodes": [
+    { "id": "n1", "text": "Leilão de Imóveis", "x": 700, "y": 500, "color": "#7B3B1E" },
+    { "id": "n2", "text": "Modalidades", "x": 420, "y": 360, "color": "#3F5B4C" },
+    { "id": "n3", "text": "Documentação", "x": 420, "y": 640, "color": "#2E4A6B" },
+    { "id": "n4", "text": "Riscos", "x": 1000, "y": 360, "color": "#6B4A2E" },
+    { "id": "n5", "text": "Financiamento", "x": 1000, "y": 640, "color": "#5A4066" }
+  ],
+  "edges": [
+    { "a": "n1", "b": "n2" },
+    { "a": "n1", "b": "n3" },
+    { "a": "n1", "b": "n4" },
+    { "a": "n1", "b": "n5" }
+  ]
+}
