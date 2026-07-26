@@ -1,3 +1,4 @@
+;(function(){function j(){var n=document.querySelector('#dc-root nav')||document.querySelector('nav');if(!n||document.getElementById('fws-calc-link'))return;var a=document.createElement('a');a.id='fws-calc-link';a.href='calculadora.html';a.textContent='\uD83E\uDDEE Calculadora';a.title='Calculadora de viabilidade de leilao';a.style.cssText='display:inline-flex;align-items:center;gap:6px;margin-left:8px;padding:6px 12px;border-radius:20px;background:#7B3B1E;color:#fff;font:600 13px Segoe UI,sans-serif;text-decoration:none';n.appendChild(a);}j();var rt=document.getElementById('dc-root')||document.body;try{new MutationObserver(j).observe(rt,{childList:true,subtree:true});}catch(e){}})();
 /* FWS Leilões de Imóveis — recursos extras
    1) Biblioteca de material extra (PDF) — download (oficial) + upload pessoal (IndexedDB)
    2) Mapa mental interativo e modificável — autosave local + exportar/importar arquivo oficial
