@@ -1,0 +1,348 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Calculadora de Viabilidade — FWS Leilões de Imóveis</title>
+<style>
+  :root{
+    --marrom:#5b3a1e; --marrom2:#7B3B1E; --oliva:#6b6a34; --areia:#efe9dc; --areia2:#f7f3ea;
+    --tinta:#2e2a24; --linha:#d9cfbe; --verde:#2f7d4f; --amarelo:#b8860b; --vermelho:#a33a2a;
+    --card:#fffdf8;
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  body{font-family:'Segoe UI',Helvetica,Arial,sans-serif;color:var(--tinta);background:#e9e2d3;line-height:1.5;padding:0 0 60px}
+  header{background:linear-gradient(120deg,var(--marrom),var(--marrom2));color:#fff;padding:22px 20px}
+  header h1{font-size:22px;font-weight:700}
+  header p{opacity:.9;font-size:13px;margin-top:3px}
+  .wrap{max-width:1120px;margin:0 auto;padding:0 16px}
+  .grid{display:grid;grid-template-columns:360px 1fr;gap:18px;margin-top:18px}
+  @media(max-width:860px){.grid{grid-template-columns:1fr}}
+  .panel{background:var(--card);border:1px solid var(--linha);border-radius:12px;padding:16px;box-shadow:0 1px 3px rgba(0,0,0,.06)}
+  .panel h2{color:var(--marrom);font-size:14px;text-transform:uppercase;letter-spacing:.5px;margin:14px 0 8px;border-bottom:1px solid var(--linha);padding-bottom:5px}
+  .panel h2:first-child{margin-top:0}
+  .field{display:flex;justify-content:space-between;align-items:center;gap:10px;margin:7px 0}
+  .field label{font-size:13px;flex:1}
+  .field small{display:block;color:#8a7f6d;font-size:11px;font-weight:400}
+  .field input[type=number]{width:118px;padding:6px 8px;border:1px solid var(--linha);border-radius:6px;text-align:right;font-size:13px;background:#fff}
+  .field input:focus{outline:2px solid var(--oliva);border-color:var(--oliva)}
+  .chk{display:flex;align-items:center;gap:8px}
+  .chk input{width:16px;height:16px}
+  .miniBtn{font-size:11px;background:var(--areia);color:var(--marrom2);border:1px solid var(--marrom2);border-radius:6px;padding:4px 8px;cursor:pointer;white-space:nowrap}
+  .secTitle{color:var(--marrom);font-size:15px;font-weight:700;margin:22px 0 8px}
+  .results{display:grid;grid-template-columns:1.4fr 1fr 1fr 1fr;gap:0;border:1px solid var(--linha);border-radius:12px;overflow:hidden;background:var(--card)}
+  .results div{padding:9px 11px;border-bottom:1px solid var(--linha);font-size:13px}
+  .results .h{background:var(--marrom);color:#fff;font-weight:600;text-align:right;border-bottom:none}
+  .results .h.lab{text-align:left}
+  .results .lab{font-weight:600;color:#4a4230}
+  .results .num{text-align:right;font-variant-numeric:tabular-nums}
+  .results .sub{font-size:11px;color:#8a7f6d;font-weight:400}
+  .results .row-strong div{background:var(--areia2);font-weight:700}
+  .verd{padding:12px 11px !important;text-align:center;font-weight:700;font-size:13px}
+  .badge{display:inline-block;padding:4px 8px;border-radius:20px;color:#fff;font-size:12px}
+  .g{background:var(--verde)}.y{background:var(--amarelo)}.r{background:var(--vermelho)}
+  .tint-g{background:#e7f1ea !important}.tint-y{background:#f6efd9 !important}.tint-r{background:#f4e3df !important}
+  .note{background:var(--areia);border-left:4px solid var(--oliva);padding:9px 12px;border-radius:6px;font-size:12px;color:#4a4230;margin-top:14px}
+  .caption{font-size:12px;color:#6b5a34;margin:4px 0 0}
+  .foot{max-width:1120px;margin:22px auto 0;padding:0 16px;font-size:11px;color:#7a6f5c}
+  .pill{font-size:11px;background:var(--areia);color:var(--marrom);padding:2px 8px;border-radius:20px;border:1px solid var(--linha)}
+  .btns{margin-top:14px;display:flex;gap:10px;flex-wrap:wrap}
+  .btns button{background:var(--marrom2);color:#fff;border:none;padding:9px 14px;border-radius:8px;font-size:13px;cursor:pointer}
+  .btns button.alt{background:#fff;color:var(--marrom2);border:1px solid var(--marrom2)}
+  @media print{body{background:#fff}.panel,.btns,.no-print{display:none}.grid{grid-template-columns:1fr}}
+</style>
+</head>
+<body>
+<header>
+  <div class="wrap" style="padding:0">
+    <h1>Calculadora de Viabilidade de Leilão</h1>
+    <p>FWS Leilões de Imóveis · Fase 2 — à vista × financiado (PRICE/SAC), IR, custo de oportunidade, TIR anualizada, <b>teto de lance</b> e <b>cenários</b></p>
+  </div>
+</header>
+
+<div class="wrap">
+<div class="grid">
+
+  <!-- ENTRADAS -->
+  <div class="panel no-print" id="inputs">
+    <h2>1 · Imóvel e lance</h2>
+    <div class="field"><label>Valor de mercado / avaliação (R$)</label><input type="number" id="mercado" value="215000"></div>
+    <div class="field"><label>Valor do lance / arremate (R$)</label><input type="number" id="lance" value="118000"></div>
+    <div class="field"><label>Desconto sobre o mercado</label><span class="pill" id="desconto">—</span></div>
+
+    <h2>2 · Custos da arrematação</h2>
+    <div class="field"><label>Comissão do leiloeiro (%)<small>0% em venda direta/online Caixa</small></label><input type="number" id="comLeil" value="5" step="0.1"></div>
+    <div class="field"><label>ITBI (%)<small>padrão ~2%, varia por município</small></label><input type="number" id="itbi" value="2" step="0.1"></div>
+    <div class="field"><label>Registro em cartório (R$)</label><input type="number" id="registro" value="2000"></div>
+    <div class="field"><label>Jurídico / desocupação (R$)</label><input type="number" id="juridico" value="4500"></div>
+    <div class="field"><label>Reforma e outros (R$)<small>dedutível do IR</small></label><input type="number" id="reforma" value="8000"></div>
+
+    <h2>3 · Carrego (enquanto é seu)</h2>
+    <div class="field"><label>Meses até vender</label><input type="number" id="meses" value="6"></div>
+    <div class="field"><label>Condomínio + IPTU por mês (R$)</label><input type="number" id="carrego" value="350"></div>
+
+    <h2>4 · A venda</h2>
+    <div class="field"><label>Valor estimado de venda (R$)<small>use valor conservador</small></label><input type="number" id="venda" value="215000"></div>
+    <div class="field"><label>Comissão de corretagem (%)</label><input type="number" id="corretagem" value="5" step="0.1"></div>
+
+    <h2>5 · Financiamento do arremate</h2>
+    <div class="field"><label>Entrada (% do lance)</label><input type="number" id="entrada" value="5" step="0.5"></div>
+    <div class="field"><label>Juros (% ao ano)</label><input type="number" id="juros" value="11" step="0.1"></div>
+    <div class="field"><label>Prazo (meses)</label><input type="number" id="prazo" value="360"></div>
+
+    <h2>6 · Parâmetros financeiros</h2>
+    <div class="field"><label>CDI (% ao ano)<small>custo de oportunidade · jul/2026 ≈ 14,15%</small></label><input type="number" id="cdi" value="14.15" step="0.05"></div>
+    <div class="field chk"><input type="checkbox" id="isento"><label>Sou isento de IR sobre o ganho</label></div>
+    <div class="note" id="isentoNota">Para <b>flip</b> (venda rápida, operações repetidas), a isenção raramente se aplica — o padrão realista é IR de 15%. Marque só se: único imóvel ≤ R$440 mil sem venda em 5 anos, reinvestimento em imóvel residencial em 180 dias, ou imóvel adquirido até 1969. Confirme com um contador.</div>
+
+    <h2>7 · Teto de lance e cenários</h2>
+    <div class="field"><label>Retorno-alvo do teto (% a.a.)<small>TIR anual mínima que você exige</small></label><input type="number" id="alvo" value="30" step="1"></div>
+    <div class="field"><label>Ancorar ao CDI</label><button class="miniBtn" onclick="setAlvo2xCDI()">Usar 2× CDI</button></div>
+    <div class="field"><label>Cenário: venda demora ± (meses)</label><input type="number" id="cenMeses" value="6" step="1"></div>
+    <div class="field"><label>Cenário: preço de venda ± (%)</label><input type="number" id="cenVar" value="15" step="1"></div>
+
+    <div class="btns">
+      <button onclick="window.print()">Imprimir / PDF</button>
+      <button class="alt" onclick="reset()">Restaurar exemplo</button>
+    </div>
+  </div>
+
+  <!-- RESULTADOS -->
+  <div>
+    <div class="results" id="out">
+      <div class="h lab">Resultado</div><div class="h">À vista</div><div class="h">Financiado PRICE</div><div class="h">Financiado SAC</div>
+      <!-- rows injected -->
+    </div>
+    <p class="caption" id="capIR">—</p>
+    <div class="note">
+      <b>Como ler:</b> a métrica-título é a <b>TIR anualizada</b> — ela põe à vista e financiado na mesma régua, apesar dos prazos e do capital diferentes, e é o que se compara com o CDI. O <b>excedente ao CDI</b> mostra, em reais, quanto você ganha <i>acima</i> de simplesmente deixar o mesmo dinheiro rendendo. Se ele for negativo, o dinheiro renderia mais parado (🔴).
+    </div>
+    <div class="note" style="border-color:var(--marrom2)">
+      <b>Veredito</b> (regra editável): 🟢 Excelente = TIR anual ≥ 2× CDI e excedente positivo · 🟡 Atenção = supera o CDI com margem apertada · 🔴 Repense = não supera o CDI líquido.
+    </div>
+
+    <!-- TETO DE LANCE -->
+    <div class="secTitle">Teto de lance — o máximo que ainda entrega o retorno-alvo</div>
+    <div class="results" id="teto"></div>
+    <p class="caption" id="capTeto">—</p>
+    <div class="note">
+      <b>Por que por coluna:</b> o teto muda conforme a forma de pagamento. No financiado, a alavancagem infla o ROI, então o teto é ancorado na <b>TIR anualizada</b> (não no ROI) para não te empurrar a pagar caro demais. Abaixo de cada teto aparece o <b>lucro em R$</b> naquele lance — se o teto do financiado for alto mas o lucro pequeno, é sinal de armadilha de alavancagem.
+    </div>
+
+    <!-- CENÁRIOS -->
+    <div class="secTitle">Cenários — pessimista · realista · otimista</div>
+    <div class="results" id="cenarios"></div>
+    <p class="caption" id="capCen">—</p>
+    <div class="note">
+      Cada célula mostra a <b>TIR anualizada</b> e, abaixo, o <b>lucro líquido</b>, com a cor do veredito. O <b>pessimista</b> é o piso que importa: se ele já fica 🔴, o negócio depende de tudo dar certo. Em vendas muito rápidas (otimista de ~1 mês) a TIR anualizada estoura e aparece como "> 999%" — nesses casos leia o <b>lucro em R$</b>, que é o número honesto. Ajuste a demora e a variação de preço no painel de entradas (item 7).
+    </div>
+  </div>
+
+</div>
+</div>
+
+<div class="foot">
+  Ferramenta de <b>estudo</b> — estimativa, não é recomendação fiscal ou jurídica. Confira o edital, os débitos (Tema 1.134/STJ: IPTU anterior não passa ao arrematante; condomínio pode) e um contador para o IR real.
+  Fase 2 de 4: falta o cenário de aluguel (buy-and-hold) e o comparador de imóveis com exportação. · v2.0
+</div>
+
+<script>
+const $=id=>document.getElementById(id);
+const money=v=>isFinite(v)?v.toLocaleString('pt-BR',{style:'currency',currency:'BRL',maximumFractionDigits:0}):'—';
+const pct=v=>isFinite(v)?(v*100).toLocaleString('pt-BR',{maximumFractionDigits:1})+'%':'—';
+// TIR anualizada explode em prazos muito curtos (venda em ~1 mês) — capa a exibição, leia o lucro
+const tpct=v=>!isFinite(v)?'—':(v>9.99?'> 999% a.a.':pct(v));
+
+function irProgressivo(ganho){
+  if(ganho<=0) return 0;
+  let f=[[5e6,.15],[1e7,.175],[3e7,.20],[Infinity,.225]], ir=0, ant=0;
+  for(const[lim,al] of f){const faixa=Math.min(ganho,lim)-ant; if(faixa>0)ir+=faixa*al; ant=lim; if(ganho<=lim)break;}
+  return ir;
+}
+function irRendaFixa(meses){ return meses<=6?.225:meses<=12?.20:meses<=24?.175:.15; }
+
+function tir(cf){ // IRR mensal por bisseção
+  const npv=r=>cf.reduce((s,c,k)=>s+c/Math.pow(1+r,k),0);
+  let lo=-0.99,hi=2;
+  if(npv(lo)*npv(hi)>0) return NaN;
+  for(let i=0;i<200;i++){const m=(lo+hi)/2; (npv(m)>0)?lo=m:hi=m;}
+  return (lo+hi)/2;
+}
+
+// ---- MOTOR: calcula tudo para um conjunto V (aceita lance/meses/venda arbitrários) ----
+function engine(V){
+  const meses=Math.max(1,Math.round(V.meses));
+  const custosAquis = V.lance*V.comLeil + V.lance*V.itbi + V.registro + V.juridico + V.reforma;
+  const carregoTot = V.carrego*meses;
+  const vendaLiq = V.venda - V.venda*V.corretagem;
+  const custoFiscal = V.lance + V.lance*V.comLeil + V.lance*V.itbi + V.registro + V.juridico + V.reforma;
+  const ganho = vendaLiq - custoFiscal;
+  const IR = V.isento?0:irProgressivo(ganho);
+  const cdiMes = Math.pow(1+V.cdi,1/12)-1;
+  const cdiMesLiq = cdiMes*(1-irRendaFixa(meses));
+  const cdiAnoLiq = Math.pow(1+cdiMesLiq,12)-1;
+  const oportunidade = ds => ds.reduce((s,d)=>s+d.val*(Math.pow(1+cdiMesLiq,meses-d.t)-1),0);
+
+  // à vista
+  const av={};
+  av.desemb0 = V.lance + custosAquis;
+  av.capital = av.desemb0 + carregoTot;
+  av.lucro = vendaLiq - av.capital - IR;
+  av.roi = av.lucro/av.capital;
+  { const cf=new Array(meses+1).fill(0); cf[0]=-av.desemb0;
+    for(let t=1;t<=meses;t++)cf[t]=-V.carrego; cf[meses]+=(vendaLiq-IR);
+    av.tir=Math.pow(1+tir(cf),12)-1; }
+  { const d=[{t:0,val:av.desemb0}]; for(let t=1;t<=meses;t++)d.push({t,val:V.carrego});
+    av.rendCDI=oportunidade(d); av.exced=av.lucro-av.rendCDI; }
+
+  // financiado
+  function financiado(sistema){
+    const o={}; const i=Math.pow(1+V.juros,1/12)-1; const PV=V.lance*(1-V.entrada);
+    const entrada=V.lance*V.entrada; const n=V.prazo, k=Math.min(meses,n);
+    o.desemb0=entrada+custosAquis;
+    let somaParc=0, saldo=PV; const parcelas=[];
+    if(sistema==='PRICE'){
+      const p=PV*i/(1-Math.pow(1+i,-n));
+      for(let m=1;m<=k;m++){parcelas.push(p);somaParc+=p;}
+      saldo = PV*(Math.pow(1+i,n)-Math.pow(1+i,k))/(Math.pow(1+i,n)-1);
+    } else {
+      const amort=PV/n;
+      for(let m=1;m<=k;m++){const parc=amort+saldo*i; parcelas.push(parc); somaParc+=parc; saldo-=amort;}
+    }
+    o.saldo=saldo;
+    o.capital=o.desemb0+somaParc+carregoTot;
+    o.lucro=(vendaLiq-saldo)-o.desemb0-somaParc-carregoTot-IR;
+    o.roi=o.lucro/o.capital;
+    const cf=new Array(meses+1).fill(0); cf[0]=-o.desemb0;
+    for(let t=1;t<=meses;t++)cf[t]=-((parcelas[t-1]||0)+V.carrego);
+    cf[meses]+=(vendaLiq-saldo-IR);
+    o.tir=Math.pow(1+tir(cf),12)-1;
+    const d=[{t:0,val:o.desemb0}]; for(let t=1;t<=meses;t++)d.push({t,val:(parcelas[t-1]||0)+V.carrego});
+    o.rendCDI=oportunidade(d); o.exced=o.lucro-o.rendCDI;
+    return o;
+  }
+  return {ganho,IR,cdiAnoLiq,vendaLiq,av,pr:financiado('PRICE'),sa:financiado('SAC')};
+}
+
+function veredito(o,res,cdi){
+  if(o.tir>=2*cdi && o.exced>0) return {cls:'g',lab:'🟢 Excelente'};
+  if(o.tir>=res.cdiAnoLiq) return {cls:'y',lab:'🟡 Atenção'};
+  return {cls:'r',lab:'🔴 Repense'};
+}
+
+// teto: maior lance cuja TIR anual do modo >= alvo (TIR decrescente no lance)
+function tetoLance(V, modo, alvo){
+  const f = L => engine(Object.assign({},V,{lance:L}))[modo].tir - alvo;
+  let lo=500, hi=Math.max(V.venda*1.5, V.mercado*1.3, 10000);
+  if(!(f(lo)>0)) return null;      // nem no lance mínimo bate o alvo → fundamento fraco
+  if(f(hi)>0) return {lance:hi, cap:true};
+  for(let i=0;i<80;i++){const m=(lo+hi)/2; (f(m)>0)?lo=m:hi=m;}
+  return {lance:(lo+hi)/2, cap:false};
+}
+
+function readV(){
+  return {mercado:+$('mercado').value,lance:+$('lance').value,comLeil:+$('comLeil').value/100,
+    itbi:+$('itbi').value/100,registro:+$('registro').value,juridico:+$('juridico').value,reforma:+$('reforma').value,
+    meses:Math.max(1,+$('meses').value),carrego:+$('carrego').value,venda:+$('venda').value,corretagem:+$('corretagem').value/100,
+    entrada:+$('entrada').value/100,juros:+$('juros').value/100,prazo:Math.max(1,+$('prazo').value),cdi:+$('cdi').value/100,isento:$('isento').checked};
+}
+
+function setAlvo2xCDI(){ $('alvo').value=(2*(+$('cdi').value)).toFixed(1); calc(); }
+
+function calc(){
+  const V=readV();
+  const res=engine(V);
+  const {av,pr,sa,IR,ganho}=res;
+
+  $('desconto').textContent = V.mercado>0 ? pct(1-V.lance/V.mercado)+' de desconto' : '—';
+  $('isentoNota').style.display=V.isento?'none':'block';
+
+  // ---- TABELA PRINCIPAL ----
+  const rows=[
+    ['Dinheiro do seu bolso','desemb0','','O que sai na entrada + custos'],
+    ['Total desembolsado','capital','','Bolso + carrego (+ parcelas)'],
+    ['IR sobre o ganho','IR_ROW','',''],
+    ['Lucro líquido','lucro','strong',''],
+    ['ROI sobre capital próprio','roi','',''],
+    ['TIR anualizada','tir','strong','métrica-título'],
+    ['Excedente ao CDI','exced','','acima de deixar rendendo'],
+  ];
+  let html='<div class="h lab">Resultado</div><div class="h">À vista</div><div class="h">Financiado PRICE</div><div class="h">Financiado SAC</div>';
+  for(const[lab,key,cls,sub] of rows){
+    const rowcls = cls==='strong'?' class="row-strong"':'';
+    html+=`<div${rowcls} style="display:contents">`;
+    html+=`<div class="lab">${lab}${sub?`<div class="sub">${sub}</div>`:''}</div>`;
+    for(const o of [av,pr,sa]){
+      let val;
+      if(key==='IR_ROW') val=money(IR);
+      else if(key==='tir') val=tpct(o[key]);
+      else if(key==='roi') val=pct(o[key]);
+      else val=money(o[key]);
+      html+=`<div class="num">${val}</div>`;
+    }
+    html+='</div>';
+  }
+  html+='<div class="lab verd">Veredito</div>';
+  for(const o of [av,pr,sa]){const v=veredito(o,res,V.cdi); html+=`<div class="verd"><span class="badge ${v.cls}">${v.lab}</span></div>`;}
+  $('out').innerHTML=html;
+
+  $('capIR').innerHTML = `Ganho tributável (venda − corretagem − custo de aquisição, com reforma deduzida): <b>${money(ganho)}</b> · IR ${V.isento?'<b>isento</b>':'<b>'+money(IR)+'</b> (≈'+pct(ganho>0?IR/ganho:0)+')'} · CDI líquido no período: <b>${pct(res.cdiAnoLiq)} a.a.</b> Saldo devedor a quitar na venda — PRICE ${money(pr.saldo)} · SAC ${money(sa.saldo)}.`;
+
+  // ---- TETO DE LANCE ----
+  const alvo=+$('alvo').value/100;
+  let th=`<div class="h lab">Teto p/ TIR ≥ ${pct(alvo)} a.a.</div><div class="h">À vista</div><div class="h">Financiado PRICE</div><div class="h">Financiado SAC</div>`;
+  th+='<div style="display:contents"><div class="lab">Lance máximo</div>';
+  const tetos={};
+  for(const modo of ['av','pr','sa']){
+    const t=tetoLance(V,modo,alvo); tetos[modo]=t;
+    if(!t){ th+=`<div class="num">—</div>`; }
+    else { th+=`<div class="num">${t.cap?'≥ ':''}${money(t.lance)}</div>`; }
+  }
+  th+='</div>';
+  th+='<div style="display:contents"><div class="lab">Desconto sobre o mercado<div class="sub">no lance-teto</div></div>';
+  for(const modo of ['av','pr','sa']){const t=tetos[modo]; th+=`<div class="num">${t&&V.mercado>0?pct(1-t.lance/V.mercado):'—'}</div>`;}
+  th+='</div>';
+  th+='<div style="display:contents"><div class="lab">Lucro líquido no teto</div>';
+  for(const modo of ['av','pr','sa']){
+    const t=tetos[modo];
+    if(!t){th+=`<div class="num">—</div>`;continue;}
+    const r2=engine(Object.assign({},V,{lance:t.lance}));
+    th+=`<div class="num">${money(r2[modo].lucro)}</div>`;
+  }
+  th+='</div>';
+  $('teto').innerHTML=th;
+  const anyNull=['av','pr','sa'].some(m=>!tetos[m]);
+  $('capTeto').innerHTML = anyNull
+    ? `Onde aparece "—": nem no lance mínimo o retorno chega a ${pct(alvo)} a.a. — o problema não é o preço do lance, é a diferença entre compra e venda. Reveja o valor de venda, os custos ou o prazo.`
+    : `Leia assim: pagar <b>até</b> esses valores mantém a TIR anual em ${pct(alvo)} ou mais. Seu lance atual é ${money(V.lance)}.`;
+
+  // ---- CENÁRIOS ----
+  const cm=Math.abs(+$('cenMeses').value), cv=Math.abs(+$('cenVar').value)/100;
+  const cenarios=[
+    {nome:'🔴 Pessimista', sub:`venda +${cm}m · −${pct(cv)}`, meses:V.meses+cm, venda:V.venda*(1-cv)},
+    {nome:'⚪ Realista', sub:'valores digitados', meses:V.meses, venda:V.venda},
+    {nome:'🟢 Otimista', sub:`venda −${cm}m · +${pct(cv)}`, meses:Math.max(1,V.meses-cm), venda:V.venda*(1+cv)},
+  ];
+  let ch=`<div class="h lab">Cenário</div><div class="h">À vista</div><div class="h">Financiado PRICE</div><div class="h">Financiado SAC</div>`;
+  for(const c of cenarios){
+    const rc=engine(Object.assign({},V,{meses:c.meses,venda:c.venda}));
+    ch+=`<div style="display:contents"><div class="lab">${c.nome}<div class="sub">${c.sub}</div></div>`;
+    for(const modo of ['av','pr','sa']){
+      const o=rc[modo]; const v=veredito(o,rc,V.cdi);
+      ch+=`<div class="num tint-${v.cls}">${tpct(o.tir)}<div class="sub">${money(o.lucro)}</div></div>`;
+    }
+    ch+='</div>';
+  }
+  $('cenarios').innerHTML=ch;
+  $('capCen').innerHTML=`Cada célula: <b>TIR anualizada</b> em cima, <b>lucro líquido</b> embaixo, cor = veredito. Pessimista assume venda demorando ${cm} meses a mais e saindo ${pct(cv)} abaixo do estimado.`;
+}
+
+function reset(){
+  const def={mercado:215000,lance:118000,comLeil:5,itbi:2,registro:2000,juridico:4500,reforma:8000,meses:6,carrego:350,venda:215000,corretagem:5,entrada:5,juros:11,prazo:360,cdi:14.15,alvo:30,cenMeses:6,cenVar:15};
+  for(const k in def)$(k).value=def[k]; $('isento').checked=false; calc();
+}
+document.querySelectorAll('input').forEach(el=>el.addEventListener('input',calc));
+calc();
+</script>
+</body>
+</html>
