@@ -90,6 +90,15 @@
     <div class="field"><label>Juros (% ao ano)</label><input type="number" id="juros" value="11" step="0.1"></div>
     <div class="field"><label>Prazo (meses)</label><input type="number" id="prazo" value="360"></div>
 
+    <h2>5b · Custos do financiamento<small style="display:block;font-weight:400;text-transform:none;letter-spacing:0;color:#8a7f6d">defaults de mercado — troque pelos números do seu contrato</small></h2>
+    <div class="field"><label>MIP — seguro de vida (%/mês s/ saldo)<small>morte/invalidez · varia com a idade</small></label><input type="number" id="mip" value="0.035" step="0.005"></div>
+    <div class="field"><label>DFI — seguro do imóvel (%/mês s/ avaliação)<small>danos físicos ao imóvel</small></label><input type="number" id="dfi" value="0.015" step="0.005"></div>
+    <div class="field"><label>Taxa de administração (R$/mês)</label><input type="number" id="taxaAdm" value="25" step="1"></div>
+    <div class="field"><label>Avaliação do imóvel (R$)<small>tarifa de originação (uma vez)</small></label><input type="number" id="avaliacao" value="3000"></div>
+    <div class="field"><label>IOF sobre o valor financiado (%)<small>SFH costuma ser isento — 0 é o padrão</small></label><input type="number" id="iof" value="0" step="0.01"></div>
+    <div class="field"><label>Baixa / averbação da quitação (R$)<small>cancelar a alienação no cartório na venda</small></label><input type="number" id="baixa" value="500"></div>
+    <div class="field"><label>Multa de quitação antecipada (%)<small>proibida por lei — deixe 0, campo só por segurança</small></label><input type="number" id="multaQuit" value="0" step="0.1"></div>
+
     <h2>6 · Parâmetros financeiros</h2>
     <div class="field"><label>CDI (% ao ano)<small>custo de oportunidade · jul/2026 ≈ 14,15%</small></label><input type="number" id="cdi" value="14.15" step="0.05"></div>
     <div class="field chk"><input type="checkbox" id="isento"><label>Sou isento de IR sobre o ganho</label></div>
@@ -188,7 +197,7 @@ function engine(V){
   av.desemb0 = V.lance + custosAquis;
   av.capital = av.desemb0 + carregoTot;
   av.lucro = vendaLiq - av.capital - IR;
-  av.roi = av.lucro/av.capital;
+  av.roi = av.lucro/av.desemb0;   // ROI sobre o desembolso inicial (lance + custos de aquisição)
   { const cf=new Array(meses+1).fill(0); cf[0]=-av.desemb0;
     for(let t=1;t<=meses;t++)cf[t]=-V.carrego; cf[meses]+=(vendaLiq-IR);
     av.tir=Math.pow(1+tir(cf),12)-1; }
@@ -199,23 +208,29 @@ function engine(V){
   function financiado(sistema){
     const o={}; const i=Math.pow(1+V.juros,1/12)-1; const PV=V.lance*(1-V.entrada);
     const entrada=V.lance*V.entrada; const n=V.prazo, k=Math.min(meses,n);
-    o.desemb0=entrada+custosAquis;
-    let somaParc=0, saldo=PV; const parcelas=[];
-    if(sistema==='PRICE'){
-      const p=PV*i/(1-Math.pow(1+i,-n));
-      for(let m=1;m<=k;m++){parcelas.push(p);somaParc+=p;}
-      saldo = PV*(Math.pow(1+i,n)-Math.pow(1+i,k))/(Math.pow(1+i,n)-1);
-    } else {
-      const amort=PV/n;
-      for(let m=1;m<=k;m++){const parc=amort+saldo*i; parcelas.push(parc); somaParc+=parc; saldo-=amort;}
+    const iofValor = PV*V.iof;
+    // desembolso inicial = entrada + custos de aquisição + originação do financiamento (avaliação + IOF)
+    o.desemb0 = entrada + custosAquis + V.avaliacao + iofValor;
+    // parcela mês a mês: juro/amortização (PRICE ou SAC) + MIP (s/ saldo) + DFI (s/ avaliação) + taxa adm
+    const p = sistema==='PRICE' ? PV*i/(1-Math.pow(1+i,-n)) : null;
+    const amort = sistema==='SAC' ? PV/n : null;
+    let somaParc=0, somaSeg=0, saldo=PV; const parcelas=[];
+    for(let m=1;m<=k;m++){
+      const mipM = saldo*V.mip, dfiM = V.mercado*V.dfi;   // MIP sobre o saldo no início do mês
+      const base = sistema==='PRICE' ? p : amort + saldo*i;
+      saldo = sistema==='PRICE' ? saldo*(1+i) - p : saldo - amort;
+      const parcTot = base + mipM + dfiM + V.taxaAdm;
+      parcelas.push(parcTot); somaParc += parcTot; somaSeg += mipM + dfiM + V.taxaAdm;
     }
-    o.saldo=saldo;
-    o.capital=o.desemb0+somaParc+carregoTot;
-    o.lucro=(vendaLiq-saldo)-o.desemb0-somaParc-carregoTot-IR;
-    o.roi=o.lucro/o.capital;
+    o.saldo = saldo;
+    o.custoQuit = saldo*V.multaQuit + V.baixa;   // custo de quitar além do principal (multa proibida=0 + baixa)
+    o.somaSeg = somaSeg;
+    o.capital = o.desemb0 + somaParc + carregoTot;   // informativo: total desembolsado
+    o.lucro = (vendaLiq - saldo - o.custoQuit) - o.desemb0 - somaParc - carregoTot - IR;
+    o.roi = o.lucro/o.desemb0;   // ROI sobre o desembolso inicial (entrada + custos de aquisição + originação)
     const cf=new Array(meses+1).fill(0); cf[0]=-o.desemb0;
     for(let t=1;t<=meses;t++)cf[t]=-((parcelas[t-1]||0)+V.carrego);
-    cf[meses]+=(vendaLiq-saldo-IR);
+    cf[meses]+=(vendaLiq - saldo - o.custoQuit - IR);
     o.tir=Math.pow(1+tir(cf),12)-1;
     const d=[{t:0,val:o.desemb0}]; for(let t=1;t<=meses;t++)d.push({t,val:(parcelas[t-1]||0)+V.carrego});
     o.rendCDI=oportunidade(d); o.exced=o.lucro-o.rendCDI;
@@ -244,7 +259,8 @@ function readV(){
   return {mercado:+$('mercado').value,lance:+$('lance').value,comLeil:+$('comLeil').value/100,
     itbi:+$('itbi').value/100,registro:+$('registro').value,juridico:+$('juridico').value,reforma:+$('reforma').value,
     meses:Math.max(1,+$('meses').value),carrego:+$('carrego').value,venda:+$('venda').value,corretagem:+$('corretagem').value/100,
-    entrada:+$('entrada').value/100,juros:+$('juros').value/100,prazo:Math.max(1,+$('prazo').value),cdi:+$('cdi').value/100,isento:$('isento').checked};
+    entrada:+$('entrada').value/100,juros:+$('juros').value/100,prazo:Math.max(1,+$('prazo').value),cdi:+$('cdi').value/100,isento:$('isento').checked,
+    mip:+$('mip').value/100,dfi:+$('dfi').value/100,taxaAdm:+$('taxaAdm').value,avaliacao:+$('avaliacao').value,iof:+$('iof').value/100,baixa:+$('baixa').value,multaQuit:+$('multaQuit').value/100};
 }
 
 function setAlvo2xCDI(){ $('alvo').value=(2*(+$('cdi').value)).toFixed(1); calc(); }
@@ -259,11 +275,11 @@ function calc(){
 
   // ---- TABELA PRINCIPAL ----
   const rows=[
-    ['Dinheiro do seu bolso','desemb0','','O que sai na entrada + custos'],
-    ['Total desembolsado','capital','','Bolso + carrego (+ parcelas)'],
+    ['Desembolso inicial','desemb0','','Entrada + custos de aquisição + originação'],
+    ['Total desembolsado (caixa)','capital','','Inicial + carrego + parcelas até vender'],
     ['IR sobre o ganho','IR_ROW','',''],
     ['Lucro líquido','lucro','strong',''],
-    ['ROI sobre capital próprio','roi','',''],
+    ['ROI sobre desembolso inicial','roi','','lucro ÷ desembolso inicial'],
     ['TIR anualizada','tir','strong','métrica-título'],
     ['Excedente ao CDI','exced','','acima de deixar rendendo'],
   ];
@@ -286,7 +302,7 @@ function calc(){
   for(const o of [av,pr,sa]){const v=veredito(o,res,V.cdi); html+=`<div class="verd"><span class="badge ${v.cls}">${v.lab}</span></div>`;}
   $('out').innerHTML=html;
 
-  $('capIR').innerHTML = `Ganho tributável (venda − corretagem − custo de aquisição, com reforma deduzida): <b>${money(ganho)}</b> · IR ${V.isento?'<b>isento</b>':'<b>'+money(IR)+'</b> (≈'+pct(ganho>0?IR/ganho:0)+')'} · CDI líquido no período: <b>${pct(res.cdiAnoLiq)} a.a.</b> Saldo devedor a quitar na venda — PRICE ${money(pr.saldo)} · SAC ${money(sa.saldo)}.`;
+  $('capIR').innerHTML = `Ganho tributável (venda − corretagem − custo de aquisição, com reforma deduzida): <b>${money(ganho)}</b> · IR ${V.isento?'<b>isento</b>':'<b>'+money(IR)+'</b> (≈'+pct(ganho>0?IR/ganho:0)+')'} · CDI líquido no período: <b>${pct(res.cdiAnoLiq)} a.a.</b> Custo p/ quitar na venda (saldo devedor + baixa/averbação${V.multaQuit>0?' + multa':''}) — PRICE ${money(pr.saldo+pr.custoQuit)} · SAC ${money(sa.saldo+sa.custoQuit)}. Seguros+taxa pagos no período — PRICE ${money(pr.somaSeg)} · SAC ${money(sa.somaSeg)}.`;
 
   // ---- TETO DE LANCE ----
   const alvo=+$('alvo').value/100;
@@ -338,7 +354,8 @@ function calc(){
 }
 
 function reset(){
-  const def={mercado:215000,lance:118000,comLeil:5,itbi:2,registro:2000,juridico:4500,reforma:8000,meses:6,carrego:350,venda:215000,corretagem:5,entrada:5,juros:11,prazo:360,cdi:14.15,alvo:30,cenMeses:6,cenVar:15};
+  const def={mercado:215000,lance:118000,comLeil:5,itbi:2,registro:2000,juridico:4500,reforma:8000,meses:6,carrego:350,venda:215000,corretagem:5,entrada:5,juros:11,prazo:360,cdi:14.15,alvo:30,cenMeses:6,cenVar:15,
+    mip:0.035,dfi:0.015,taxaAdm:25,avaliacao:3000,iof:0,baixa:500,multaQuit:0};
   for(const k in def)$(k).value=def[k]; $('isento').checked=false; calc();
 }
 document.querySelectorAll('input').forEach(el=>el.addEventListener('input',calc));
